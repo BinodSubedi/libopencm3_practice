@@ -1,10 +1,12 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
+#include <libopencm3/cm3/systick.h>
+#include <libopencm3/cm3/vector.h>
 
 /* Set STM32 to 48 MHz. */
 static void clock_setup(void)
 {
-	rcc_clock_setup_in_hsi_out_48mhz();
+	rcc_clock_setup_in_hse_8mhz_out_48mhz();
 }
 
 static void gpio_setup(void)
@@ -18,38 +20,49 @@ static void gpio_setup(void)
 			GPIO_PUPD_NONE, GPIO13);
 }
 
-// static void button_setup(void)
-// {
-// 	/* Enable GPIOA clock. */
-// 	rcc_periph_clock_enable(RCC_GPIOA);
 
 
-// 	/* Set GPIO0 (in GPIO port A) to 'input open-drain'. */
-// 	gpio_mode_setup(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO0);
-// }
+volatile uint16_t ticks = 0;
+void sys_tick_handler(void)
+{
+		ticks++;
+}
+
+static uint16_t getTicks(void){
+	return ticks;
+}
+
+static void resetTicks(void){
+	ticks = 0;
+}
+
+//Systick setup
+
+static void systick_setup(void)
+{
+	systick_set_frequency(1000, 48000000);
+	systick_counter_enable();
+	systick_interrupt_enable();
+}
 
 int main(void)
 {
-	int i;
 
 	clock_setup();
-	// button_setup();
 	gpio_setup();
+	systick_setup();
+
+	uint16_t start_time = getTicks();
 
 	/* Blink the LED (PD12) on the board. */
 	while (1) {
-		gpio_toggle(GPIOC, GPIO13);
 
-		/* Upon button press, blink more slowly. */
-		// if (gpio_get(GPIOA, GPIO0)) {
-		// 	for (i = 0; i < 300000; i++) {	/* Wait a bit. */
-		// 		__asm__("nop");
-		// 	}
-		// }
-
-		for (i = 0; i < 30000000; i++) {		/* Wait a bit. */
-			__asm__("nop");
+		if((getTicks() - start_time) >= 1000){
+			gpio_toggle(GPIOC, GPIO13);
+			resetTicks();
+			start_time = getTicks();
 		}
+
 	}
 
 	return 0;
