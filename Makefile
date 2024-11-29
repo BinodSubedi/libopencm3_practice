@@ -57,6 +57,8 @@ BINARY = main
 # Source files
 
 OBJS		+= app/$(BINARY).o
+OBJS		+= app/timer.o
+
 
 
 ifeq ($(strip $(OPENCM3_DIR)),)
